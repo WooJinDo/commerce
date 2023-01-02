@@ -11,7 +11,6 @@
 ![Untitled](https://s3.us-west-2.amazonaws.com/secure.notion-static.com/1a29b99f-90b6-40fb-9b3d-0c276ec70568/Untitled.jpeg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=AKIAT73L2G45EIPT3X45%2F20230102%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20230102T084338Z&X-Amz-Expires=86400&X-Amz-Signature=748327c7551049fcac730024cbfc5cc232fb0015633a6c4c28f214c93b7bfc43&X-Amz-SignedHeaders=host&response-content-disposition=filename%3D%22Untitled.jpeg%22&x-id=GetObject)
 
 ## 사용 기술 스택
-
 - SpringBoot
 - Java
 - MySQL
