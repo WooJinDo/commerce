@@ -72,12 +72,15 @@ public class MemberServiceImpl implements MemberService {
     @Override
     public boolean emailAuth(String AuthKey) {
 
-        Optional<Member> emailAuthKey = memberRepository.findByEmailAuthKey(AuthKey);
-        if (emailAuthKey.isEmpty()) {
-            return false;
-        }
+        // Optional.ofNullbale() - 값이 Null일수도, 아닐수도 있는 경우
+        // orElseThrow() : 저장된 값이 존재하면 그 값을 반환하고, 값이 존재하지 않으면 인수로 전달된 예외를 발생시킴.
+//        Optional<Member> emailAuthKey = Optional.ofNullable(memberRepository.findByEmailAuthKey(AuthKey))
+//                .orElseThrow(() -> new IllegalArgumentException("회원이 존재하지 않습니다"));
+        Member member = Optional.ofNullable(memberRepository.findByEmailAuthKey(AuthKey))
+                .orElseThrow(() -> new IllegalArgumentException("회원이 존재하지 않습니다"));
 
-        Member member = emailAuthKey.get();
+
+//        Member member = emailAuthKey.get();
         member.setEmailAuthYn(true);
         member.setEmailAuthDt(LocalDateTime.now());
         memberRepository.save(member);
