@@ -28,11 +28,11 @@ public class MemberDto {
     private LocalDateTime updatedAt; // 수정일
 
     private boolean emailAuthYn; // 이메일 인증 여부
-    private LocalDateTime emailAuthDt; // 이메일 인증일
+    private LocalDateTime emailAuthAt; // 이메일 인증일
     private String emailAuthKey; // 이메일 인증키
 
     private String resetPasswordKey;
-    private LocalDateTime resetPasswordLimitDt;
+    private LocalDateTime resetPasswordLimitAt;
 
     private String userStatus; // 이용가능한상태, 정지상태
 

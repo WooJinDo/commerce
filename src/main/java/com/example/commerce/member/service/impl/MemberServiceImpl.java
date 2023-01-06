@@ -1,15 +1,24 @@
 package com.example.commerce.member.service.impl;
 
 import com.example.commerce.component.MailComponents;
+import com.example.commerce.exception.MemberNotEmailAuthException;
 import com.example.commerce.member.entity.Member;
 import com.example.commerce.member.model.MemberParam;
 import com.example.commerce.member.repository.MemberRepository;
 import com.example.commerce.member.service.MemberService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.User;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.crypto.bcrypt.BCrypt;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -39,7 +48,8 @@ public class MemberServiceImpl implements MemberService {
             return false;
         }
 
-//        String encPassword = BCrypt.hashpw(memberParam.getPassword(), BCrypt.gensalt());
+        // 비밀번호 암호화
+        String encPassword = BCrypt.hashpw(memberParam.getUserPassword(), BCrypt.gensalt());
 
         String AuthKey = UUID.randomUUID().toString().replace("-", "");
         Member member = Member.builder()
@@ -47,7 +57,7 @@ public class MemberServiceImpl implements MemberService {
                 .userName(memberParam.getUserName())
                 .userEmail(memberParam.getUserEmail())
                 .userPhone(memberParam.getUserPhone())
-                .userPassword(memberParam.getUserPassword())
+                .userPassword(encPassword)
                 .zipcode(memberParam.getZipcode())
                 .address(memberParam.getAddress())
                 .addressDetail(memberParam.getAddressDetail())
@@ -79,25 +89,86 @@ public class MemberServiceImpl implements MemberService {
         Member member = Optional.ofNullable(memberRepository.findByEmailAuthKey(AuthKey))
                 .orElseThrow(() -> new IllegalArgumentException("회원이 존재하지 않습니다"));
 
-
 //        Member member = emailAuthKey.get();
         member.setEmailAuthYn(true);
-        member.setEmailAuthDt(LocalDateTime.now());
+        member.setEmailAuthAt(LocalDateTime.now());
         memberRepository.save(member);
 
         return true;
     }
 
+    @Override
+    public boolean sendResetPassword(MemberParam memberParam) {
+        System.out.println("member0000000000000000000000000");
+        Member member = Optional.ofNullable(memberRepository
+                        .findByUserEmailAndUserId(memberParam.getUserEmail(), memberParam.getUserId()))
+                .orElseThrow((() -> new MemberNotEmailAuthException("회원 정보가 존재하지 않습니다.")));
+        System.out.println("member111111111111111! : " + member.toString());
 
-//    @Override
-//    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-//        Optional<Member> optionalMember = memberRepository.findById(username);
-//        if (!optionalMember.isPresent()) {
-//            throw new UsernameNotFoundException("회원 정보가 존재하지 않습니다.");
-//        }
-//
-//        Member member = optionalMember.get();
-//
+        String resetKey = UUID.randomUUID().toString().replace("-", "");
+        member.setResetPasswordKey(resetKey);
+        member.setResetPasswordLimitAt(LocalDateTime.now().plusDays(1)); // 패스워드 초기화 할 수 있는 기간 하루
+        memberRepository.save(member);
+
+        String email = memberParam.getUserEmail();
+        String subject = "[commerce] 비밀번호 초기화 메일 입니다.";
+        String text = "<p>commerce 비밀번호 초기화 메일 입니다.<p>" +
+                "<p>아래 링크를 클릭하셔서 비밀번호 초기화 해주세요.</p>" +
+                "<div><a href='http://localhost:8080/member/reset/password?id="
+                + resetKey + "'> 비밀번호 초기화 링크 </a></div>";
+        mailComponents.sendMail(email, subject, text);
+
+        return true;
+    }
+
+    @Override
+    public boolean resetPassword(String resetPasswordKey, String userPassword) {
+        Member member = Optional.ofNullable(memberRepository.findByResetPasswordKey(resetPasswordKey))
+                .orElseThrow(() -> new UsernameNotFoundException("회원 정보가 존재하지 않습니다."));
+
+        // 초기화 날짜가 유효한지 체크
+        if (member.getResetPasswordLimitAt() == null) {
+            throw new RuntimeException("유효한 날짜가 아닙니다.");
+        }
+
+        // 현재 시간보다 이전 값인지 확인
+        if (member.getResetPasswordLimitAt().isBefore(LocalDateTime.now())) {
+            throw new RuntimeException("유효한 날짜가 아닙니다.");
+        }
+
+        String encPassword = BCrypt.hashpw(userPassword, BCrypt.gensalt());
+        member.setUserPassword(encPassword);
+        member.setResetPasswordKey("");
+        member.setResetPasswordLimitAt(null);
+        memberRepository.save(member);
+
+        return true;
+    }
+
+    @Override
+    public boolean checkResetPassword(String resetPasswordKey) {
+        Member member = Optional.ofNullable(memberRepository.findByResetPasswordKey(resetPasswordKey))
+                .orElseThrow(() -> new UsernameNotFoundException("회원 정보가 존재하지 않습니다."));
+
+
+        // 초기화 날짜가 유효한지 체크
+        if (member.getResetPasswordLimitAt() == null) {
+            throw new RuntimeException("유효한 날짜가 아닙니다.");
+        }
+
+        // 현재 시간보다 이전 날짜인지 확인
+        if (member.getResetPasswordLimitAt().isBefore(LocalDateTime.now())) {
+            throw new RuntimeException("유효한 날짜가 아닙니다.");
+        }
+
+        return true;
+    }
+
+    @Override
+    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+        Member member = memberRepository.findById(username)
+                .orElseThrow(() -> new UsernameNotFoundException("회원 정보가 존재하지 않습니다."));
+
 //        if (Member.MEMBER_STATUS_REQ.equals(member.getUserStatus())) {
 //            throw new MemberNotEmailAuthException("이메일 활성화 이후에 로그인을 해주세요.");
 //        }
@@ -110,19 +181,18 @@ public class MemberServiceImpl implements MemberService {
 //            throw new MemberStopUserException("탈퇴된 회원 입니다.");
 //        }
 //
-//        if (!member.isEmailAuthYn()) {
-//            throw new MemberNotEmailAuthException("이메일 활성화 이후에 로그인을 해주세요.");
-//        }
-//
-//        List<GrantedAuthority> grantedAuthorities = new ArrayList<>();
-//        grantedAuthorities.add(new SimpleGrantedAuthority("ROLE_USER"));
-//
-//        if (member.isAdminYn()) {
-//            grantedAuthorities.add(new SimpleGrantedAuthority("ROLE_ADMIN"));
-//        }
-//
-//        return new User(member.getUserId(), member.getPassword(),grantedAuthorities);
-//    }
+        if (!member.isEmailAuthYn()) {
+            throw new MemberNotEmailAuthException("이메일 활성화 이후에 로그인을 해주세요.");
+        }
+        List<GrantedAuthority> grantedAuthorities = new ArrayList<>();
+        grantedAuthorities.add(new SimpleGrantedAuthority("ROLE_USER"));
+
+        if (member.isAdminYn()) {
+            grantedAuthorities.add(new SimpleGrantedAuthority("ROLE_ADMIN"));
+        }
+
+        return new User(member.getUserId(), member.getUserPassword(),grantedAuthorities);
+    }
 
 
 }
