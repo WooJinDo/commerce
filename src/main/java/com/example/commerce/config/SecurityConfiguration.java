@@ -17,8 +17,6 @@ import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 //@RequiredArgsConstructor
 public class SecurityConfiguration {
 
-//    private final UserAuthenticationSuccessHandler userAuthenticationSuccessHandler;
-
     @Bean
     PasswordEncoder getPasswordEncoder() {
         return new BCryptPasswordEncoder();
@@ -63,8 +61,6 @@ public class SecurityConfiguration {
                         "/member/find/password",
                         "/member/reset/password"
                 ).permitAll()
-//                .and()
-//                .authorizeRequests()    // 요청에 의한 보안검사 시작
                 .antMatchers("/admin/**")
                 .hasAuthority("ROLE_ADMIN")
                 .anyRequest().authenticated()   // 어떤 요청에도 보안검사를 한다.

@@ -5,10 +5,30 @@
     <title>회원 가입</title>
     <script src="https://code.jquery.com/jquery-3.6.2.js"
             integrity="sha256-pkn2CUZmheSeyssYw3vMp1+xyub4m+e+QK4sQskvuo4=" crossorigin="anonymous"></script>
+    <script>
+        $(function() {
+            let msg = '[[${errorMessage}]]';
+            if(msg != ''){
+                alert(msg);
+            }
+
+            $('form').on('submit', function() {
+                let password = $(this).find('input[name=userPassword]').val();
+                let rePassword = $(this).find('input[name=rePassword]').val();
+
+                if(password != rePassword) {
+                    alert('비밀번호가 일치하지 않습니다.');
+                    return false;
+                }
+            });
+        });
+    </script>
 </head>
 <body>
   <h1>회원 가입</h1>
   <div th:replace="/fragments/layout.html :: fragment-body-menu"></div>
+
+<!--  <div th:text="${errorMessage}"></div>-->
 
   <form method="post">
       <div>
@@ -45,7 +65,7 @@
       </div>
 
       <div>
-          <button>회원 가입하기</button>
+          <button type="submit">회원 가입하기</button>
       </div>
   </form>
 
